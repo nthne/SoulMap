@@ -8,7 +8,7 @@ from ftfy import fix_text
 # CONFIG
 # =========================
 
-PDF_PATH = r"D:\Hust\Năm ba\NLP\prj\data_raw_pdf\tu_vi_boi_toan.pdf"
+PDF_PATH = r"/Users/trannguyenmyanh/Documents/SoulMap/data_raw_pdf/tu_vi.pdf"
 OUTPUT_JSON = "dataset.json"
 FAISS_INDEX = "faiss.index"
 
@@ -72,6 +72,69 @@ def preprocess(text):
 
 
 # =========================
+# STEP 3: DETECT CUNG
+# =========================
+
+def detect_cung(text):
+    for cung in CUNG_LIST:
+        if cung.lower() in text.lower():
+            return cung
+    return "Unknown"
+
+
+# =========================
+# STEP 4: EXTRACT SAO BLOCKS
+# =========================
+
+def extract_sao_blocks(text):
+    chunks = []
+    
+    lines = text.split("\n")
+    current_sao = None
+    buffer = ""
+
+    for line in lines:
+        line_clean = line.strip()
+        # print(line_clean)  # Debug: print each line to see what's being processed
+        found = False
+        for sao in SAO_LIST:
+            if sao.lower() in line_clean.lower():
+                if current_sao:
+                    chunks.append((current_sao, buffer.strip()))
+                current_sao = sao
+                buffer = line_clean
+                found = True
+                break
+        
+        if not found:
+            buffer += " " + line_clean
+
+    if current_sao:
+        chunks.append((current_sao, buffer.strip()))
+
+    return chunks
+
+
+# =========================
+# STEP 5: BUILD DATASET
+# =========================
+
+def build_dataset(chunks):
+    dataset = []
+
+    for i, (sao, content) in enumerate(chunks):
+        dataset.append({
+            "id": f"{sao}_{i}",
+            "sao": sao,
+            "cung": detect_cung(content),
+            "noi_dung": content,
+            "nguon": "tu_vi_tong_hop_pdf"
+        })
+
+    return dataset
+
+
+# =========================
 # STEP 6: SAVE JSON
 # =========================
 
@@ -90,9 +153,9 @@ def main():
     for page in doc:
         raw_text += page.get_text()
         
-    with open("data_raw_text.txt", "w", encoding="utf-8") as f:
+    with open("data_process/tu_vi_boi_toan/tu_vi_boi_toan_raw_text.txt", "w", encoding="utf-8") as f:
         f.write(raw_text)
-        # print(len(raw_text))
+        print(len(raw_text))
         # print(raw_text[:500])
 
 if __name__ == "__main__":
